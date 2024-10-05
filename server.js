@@ -1,58 +1,37 @@
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
-const bcrypt = require("bcrypt");
-// import express from "express"
-// import cors from "cors"
-// import mongoose from "mongoose"
+import express from "express"
+import cors from "cors"
+import mongoose from "mongoose"
+import bcrypt from "bcrypt"
+//const Schema = mongoose.Schema;
+//import UserSchema from "./models/user";
+import { User } from "./models/user.js";
+
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/motivation";
+
+//const User = mongoose.model("User", UserSchema); 
+
 mongoose.connect(mongoUrl).then(() => {
   console.log("Connected to the Database successfully");
+}).catch(err => {
+  console.error("Database connection error:", err);
 });
 mongoose.Promise = Promise;
 
 const port = process.env.PORT || 8080;
 const app = express();
 
-// middlewares to enable cors and json body parsing
 app.use(cors());
 app.use(express.json());
-
-// APP LISTEN
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
 
 app.get("/", (req, res) => {
   res.send("welcome to motivational");
 });
 
 
-const UserSchema = new mongoose.Schema({
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    password: {
-      type: String,
-      required: true,
-      trim: true,
-      minlenght: 3,
-    },
-    createdAt: {
-      type: Date,
-      default: () => new Date(),
-    },
-  });
-  
-  const User = mongoose.model("User", UserSchema);
-
 
   // USER REGISTRATION
-app.post("/register", async (req, res) => {
+  app.post("/register", async (req, res) => {
     const { username, password } = req.body;
     try {
       const salt = bcrypt.genSaltSync();
@@ -79,4 +58,40 @@ app.post("/register", async (req, res) => {
         success: false,
       });
     }
+  });
+
+
+
+// USER LOGIN 
+app.post("/login", async (req, res) => {
+  const { username, password} = req.body;
+  try {
+    const user = await User.findOne({username});
+    if (user && bcrypt.compareSync(password, user.password)) {
+      res.status(200).json({
+        success: true,
+        response: {
+          // username: user.username,
+          // id: user._id,
+          user: user
+        }
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        response: "Credentials didn't match"
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      response: error
+    });
+  }
+});
+
+
+
+  app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
   });
